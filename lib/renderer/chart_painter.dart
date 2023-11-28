@@ -192,7 +192,7 @@ class ChartPainter extends BaseChartPainter {
 
       var h24 = 12 * 60 * 60 * 1000;
       if (verticalLineAt != 0 && (verticalLineAt - h24) < curPoint.time! && curPoint.time! < (verticalLineAt + h24)) {
-        print("Draw vertical line? ${verticalLineAt} ${curPoint?.time}");
+        // print("Draw vertical line? ${verticalLineAt} ${curPoint?.time}");
         drawVerticalDivider(canvas, size, curX);
       }
       if (highlightFrom != 0 && highlightStartX == 0 && (highlightFrom - h24) < curPoint.time! && curPoint.time! < (highlightFrom + h24)) {
@@ -587,9 +587,9 @@ class ChartPainter extends BaseChartPainter {
 
   void drawHighlightDates(Canvas canvas, Size size, double startX, double endX) {
     if (highlightFrom == 0 || highlightUntil == 0 || startX == 0 || endX == 0) return;
-    print(highlightUntil - highlightFrom);
-    print(endX - startX);
-    print("\n\nMAKE HIGHLITHG, ${highlightFrom} :: ${highlightUntil} :: ${startX} :: ${endX}");
+    // print(highlightUntil - highlightFrom);
+    // print(endX - startX);
+    // print("\n\nMAKE HIGHLITHG, ${highlightFrom} :: ${highlightUntil} :: ${startX} :: ${endX}");
     // var index = calculateSelectedX(selectX);
     // KLineEntity point = getItem(index);
     // Paint paintY = Paint()
