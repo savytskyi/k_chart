@@ -43,6 +43,8 @@ abstract class BaseChartPainter extends CustomPainter {
   List<String> mFormats = [yyyy, '-', mm, '-', dd, ' ', HH, ':', nn]; //格式化时间
   double xFrontPadding;
   int verticalLineAt = 0; // Draw a divider line at a given date
+  int highlightFrom = 0;
+  int highlightUntil = 0;
 
   BaseChartPainter(
     this.chartStyle, {
@@ -59,6 +61,8 @@ abstract class BaseChartPainter extends CustomPainter {
     this.secondaryState = SecondaryState.MACD,
     this.isLine = false,
     this.verticalLineAt = 0,
+    this.highlightFrom = 0,
+    this.highlightUntil = 0,
   }) {
     mItemCount = datas?.length ?? 0;
     mPointWidth = this.chartStyle.pointWidth;
@@ -163,6 +167,8 @@ abstract class BaseChartPainter extends CustomPainter {
   void drawCrossLineText(Canvas canvas, Size size);
 
   void drawVerticalDivider(Canvas canvas, Size size, double curX);
+
+  void drawHighlightDates(Canvas canvas, Size size, double startX, double endX);
 
   void initRect(Size size) {
     double volHeight = volHidden != true ? mDisplayHeight * 0.2 : 0;

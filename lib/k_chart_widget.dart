@@ -31,6 +31,8 @@ class KChartWidget extends StatefulWidget {
   final Map<String, ChartTranslations> translations;
   final List<String> timeFormat;
   int verticalLineAt = 0; // Draw a divider line at a given date
+  int highlightFrom = 0;
+  int highlightUntil = 0;
 
   //当屏幕滚动到尽头会调用，真为拉到屏幕右侧尽头，假为拉到屏幕左侧尽头
   final Function(bool)? onLoadMore;
@@ -71,7 +73,10 @@ class KChartWidget extends StatefulWidget {
       this.flingCurve = Curves.decelerate,
       this.isOnDrag,
       this.verticalTextAlignment = VerticalTextAlignment.left,
-      this.verticalLineAt = 0});
+      this.verticalLineAt = 0,
+        this.highlightFrom = 0,
+        this.highlightUntil = 0,
+      });
 
   @override
   _KChartWidgetState createState() => _KChartWidgetState();
@@ -151,6 +156,8 @@ class _KChartWidgetState extends State<KChartWidget> with TickerProviderStateMix
       maDayList: widget.maDayList,
       verticalTextAlignment: widget.verticalTextAlignment,
       verticalLineAt: widget.verticalLineAt,
+      highlightFrom: widget.highlightFrom,
+      highlightUntil: widget.highlightUntil,
     );
 
     return LayoutBuilder(

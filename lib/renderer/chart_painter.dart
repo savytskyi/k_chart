@@ -49,6 +49,8 @@ class ChartPainter extends BaseChartPainter {
   final bool showNowPrice;
   final VerticalTextAlignment verticalTextAlignment;
   int verticalLineAt = 0; // Draw a divider line at a given date
+  int highlightFrom = 0;
+  int highlightUntil = 0;
 
   ChartPainter(
     this.chartStyle,
@@ -75,6 +77,8 @@ class ChartPainter extends BaseChartPainter {
     this.fixedLength = 2,
     this.maDayList = const [5, 10, 20],
     this.verticalLineAt = 0, // Draw a divider line at a given date
+    this.highlightFrom = 0,
+    this.highlightUntil = 0,
   }) : super(chartStyle,
             datas: datas,
             scaleX: scaleX,
@@ -88,7 +92,9 @@ class ChartPainter extends BaseChartPainter {
             secondaryState: secondaryState,
             xFrontPadding: xFrontPadding,
             isLine: isLine,
-            verticalLineAt: verticalLineAt) {
+            verticalLineAt: verticalLineAt,
+            highlightFrom: highlightFrom,
+            highlightUntil: highlightUntil) {
     selectPointPaint = Paint()
       ..isAntiAlias = true
       ..strokeWidth = 0.5
@@ -107,8 +113,7 @@ class ChartPainter extends BaseChartPainter {
   void initChartRenderer() {
     if (datas != null && datas!.isNotEmpty) {
       var t = datas![0];
-      fixedLength =
-          NumberUtil.getMaxDecimalLength(t.open, t.close, t.high, t.low);
+      fixedLength = NumberUtil.getMaxDecimalLength(t.open, t.close, t.high, t.low);
     }
     mMainRenderer = MainRenderer(
       mMainRect,
@@ -125,19 +130,11 @@ class ChartPainter extends BaseChartPainter {
       maDayList,
     );
     if (mVolRect != null) {
-      mVolRenderer = VolRenderer(mVolRect!, mVolMaxValue, mVolMinValue,
-          mChildPadding, fixedLength, this.chartStyle, this.chartColors);
+      mVolRenderer = VolRenderer(mVolRect!, mVolMaxValue, mVolMinValue, mChildPadding, fixedLength, this.chartStyle, this.chartColors);
     }
     if (mSecondaryRect != null) {
-      mSecondaryRenderer = SecondaryRenderer(
-          mSecondaryRect!,
-          mSecondaryMaxValue,
-          mSecondaryMinValue,
-          mChildPadding,
-          secondaryState,
-          fixedLength,
-          chartStyle,
-          chartColors);
+      mSecondaryRenderer =
+          SecondaryRenderer(mSecondaryRect!, mSecondaryMaxValue, mSecondaryMinValue, mChildPadding, secondaryState, fixedLength, chartStyle, chartColors);
     }
   }
 
@@ -149,28 +146,20 @@ class ChartPainter extends BaseChartPainter {
       end: Alignment.topCenter,
       colors: chartColors.bgColor,
     );
-    Rect mainRect =
-        Rect.fromLTRB(0, 0, mMainRect.width, mMainRect.height + mTopPadding);
-    canvas.drawRect(
-        mainRect, mBgPaint..shader = mBgGradient.createShader(mainRect));
+    Rect mainRect = Rect.fromLTRB(0, 0, mMainRect.width, mMainRect.height + mTopPadding);
+    canvas.drawRect(mainRect, mBgPaint..shader = mBgGradient.createShader(mainRect));
 
     if (mVolRect != null) {
-      Rect volRect = Rect.fromLTRB(
-          0, mVolRect!.top - mChildPadding, mVolRect!.width, mVolRect!.bottom);
-      canvas.drawRect(
-          volRect, mBgPaint..shader = mBgGradient.createShader(volRect));
+      Rect volRect = Rect.fromLTRB(0, mVolRect!.top - mChildPadding, mVolRect!.width, mVolRect!.bottom);
+      canvas.drawRect(volRect, mBgPaint..shader = mBgGradient.createShader(volRect));
     }
 
     if (mSecondaryRect != null) {
-      Rect secondaryRect = Rect.fromLTRB(0, mSecondaryRect!.top - mChildPadding,
-          mSecondaryRect!.width, mSecondaryRect!.bottom);
-      canvas.drawRect(secondaryRect,
-          mBgPaint..shader = mBgGradient.createShader(secondaryRect));
+      Rect secondaryRect = Rect.fromLTRB(0, mSecondaryRect!.top - mChildPadding, mSecondaryRect!.width, mSecondaryRect!.bottom);
+      canvas.drawRect(secondaryRect, mBgPaint..shader = mBgGradient.createShader(secondaryRect));
     }
-    Rect dateRect =
-        Rect.fromLTRB(0, size.height - mBottomPadding, size.width, size.height);
-    canvas.drawRect(
-        dateRect, mBgPaint..shader = mBgGradient.createShader(dateRect));
+    Rect dateRect = Rect.fromLTRB(0, size.height - mBottomPadding, size.width, size.height);
+    canvas.drawRect(dateRect, mBgPaint..shader = mBgGradient.createShader(dateRect));
   }
 
   @override
@@ -187,6 +176,9 @@ class ChartPainter extends BaseChartPainter {
     canvas.save();
     canvas.translate(mTranslateX * scaleX, 0.0);
     canvas.scale(scaleX, 1.0);
+
+    double highlightStartX = 0;
+    double highlightEndX = 0;
     for (int i = mStartIndex; datas != null && i <= mStopIndex; i++) {
       KLineEntity? curPoint = datas?[i];
       if (curPoint == null) continue;
@@ -196,19 +188,29 @@ class ChartPainter extends BaseChartPainter {
 
       mMainRenderer.drawChart(lastPoint, curPoint, lastX, curX, size, canvas);
       mVolRenderer?.drawChart(lastPoint, curPoint, lastX, curX, size, canvas);
-      mSecondaryRenderer?.drawChart(
-          lastPoint, curPoint, lastX, curX, size, canvas);
-
+      mSecondaryRenderer?.drawChart(lastPoint, curPoint, lastX, curX, size, canvas);
 
       var h24 = 12 * 60 * 60 * 1000;
       if (verticalLineAt != 0 && (verticalLineAt - h24) < curPoint.time! && curPoint.time! < (verticalLineAt + h24)) {
         print("Draw vertical line? ${verticalLineAt} ${curPoint?.time}");
         drawVerticalDivider(canvas, size, curX);
       }
+      if (highlightFrom != 0 && highlightStartX == 0 && (highlightFrom - h24) < curPoint.time! && curPoint.time! < (highlightFrom + h24)) {
+        highlightStartX = curX;
+      }
+      if (highlightUntil != 0 && highlightEndX == 0 && (highlightUntil - h24) < curPoint.time! && curPoint.time! < (highlightUntil + h24)) {
+        highlightEndX = curX;
+      } else if (highlightUntil != 0 && curPoint.time! < (highlightUntil + h24)) {
+        // this one can be removed. Added just so when scrolling the graph the rec won't disappear
+        highlightEndX = curX;
+      }
     }
 
-    if ((isLongPress == true || (isTapShowInfoDialog && isOnTap)) &&
-        isTrendLine == false) {
+    if (highlightFrom != 0 && highlightUntil != 0 && highlightStartX != 0 && highlightEndX != 0) {
+      drawHighlightDates(canvas, size, highlightStartX, highlightEndX);
+    }
+
+    if ((isLongPress == true || (isTapShowInfoDialog && isOnTap)) && isTrendLine == false) {
       drawCrossLine(canvas, size);
     }
     if (isTrendLine == true) drawTrendLines(canvas, size);
@@ -306,8 +308,7 @@ class ChartPainter extends BaseChartPainter {
       tp.paint(canvas, Offset(x + w1 + w2, y - textHeight / 2));
     }
 
-    TextPainter dateTp =
-        getTextPainter(getDate(point.time), chartColors.crossTextColor);
+    TextPainter dateTp = getTextPainter(getDate(point.time), chartColors.crossTextColor);
     textWidth = dateTp.width;
     r = textHeight / 2;
     x = translateXtoX(getX(index));
@@ -319,14 +320,8 @@ class ChartPainter extends BaseChartPainter {
       x = mWidth - 1 - textWidth / 2 - w1;
     }
     double baseLine = textHeight / 2;
-    canvas.drawRect(
-        Rect.fromLTRB(x - textWidth / 2 - w1, y, x + textWidth / 2 + w1,
-            y + baseLine + r),
-        selectPointPaint);
-    canvas.drawRect(
-        Rect.fromLTRB(x - textWidth / 2 - w1, y, x + textWidth / 2 + w1,
-            y + baseLine + r),
-        selectorBorderPaint);
+    canvas.drawRect(Rect.fromLTRB(x - textWidth / 2 - w1, y, x + textWidth / 2 + w1, y + baseLine + r), selectPointPaint);
+    canvas.drawRect(Rect.fromLTRB(x - textWidth / 2 - w1, y, x + textWidth / 2 + w1, y + baseLine + r), selectorBorderPaint);
 
     dateTp.paint(canvas, Offset(x - textWidth / 2, y));
     //长按显示这条数据详情
@@ -465,25 +460,17 @@ class ChartPainter extends BaseChartPainter {
       y = getMainY(mMainHighMaxValue);
     }
 
-    nowPricePaint
-      ..color = value >= datas!.last.open
-          ? this.chartColors.nowPriceUpColor
-          : this.chartColors.nowPriceDnColor;
+    nowPricePaint..color = value >= datas!.last.open ? this.chartColors.nowPriceUpColor : this.chartColors.nowPriceDnColor;
     //先画横线
     double startX = 0;
     final max = -mTranslateX + mWidth / scaleX;
-    final space =
-        this.chartStyle.nowPriceLineSpan + this.chartStyle.nowPriceLineLength;
+    final space = this.chartStyle.nowPriceLineSpan + this.chartStyle.nowPriceLineLength;
     while (startX < max) {
-      canvas.drawLine(
-          Offset(startX, y),
-          Offset(startX + this.chartStyle.nowPriceLineLength, y),
-          nowPricePaint);
+      canvas.drawLine(Offset(startX, y), Offset(startX + this.chartStyle.nowPriceLineLength, y), nowPricePaint);
       startX += space;
     }
     //再画背景和文本
-    TextPainter tp = getTextPainter(
-        value.toStringAsFixed(fixedLength), this.chartColors.nowPriceTextColor);
+    TextPainter tp = getTextPainter(value.toStringAsFixed(fixedLength), this.chartColors.nowPriceTextColor);
 
     double offsetX;
     switch (verticalTextAlignment) {
@@ -496,9 +483,7 @@ class ChartPainter extends BaseChartPainter {
     }
 
     double top = y - tp.height / 2;
-    canvas.drawRect(
-        Rect.fromLTRB(offsetX, top, offsetX + tp.width, top + tp.height),
-        nowPricePaint);
+    canvas.drawRect(Rect.fromLTRB(offsetX, top, offsetX + tp.width, top + tp.height), nowPricePaint);
     tp.paint(canvas, Offset(offsetX, top));
   }
 
@@ -516,8 +501,7 @@ class ChartPainter extends BaseChartPainter {
     // getMainY(point.close);
 
     // k线图竖线
-    canvas.drawLine(Offset(x, mTopPadding),
-        Offset(x, size.height - mBottomPadding), paintY);
+    canvas.drawLine(Offset(x, mTopPadding), Offset(x, size.height - mBottomPadding), paintY);
     Paint paintX = Paint()
       ..color = Colors.orangeAccent
       ..strokeWidth = 1
@@ -527,18 +511,11 @@ class ChartPainter extends BaseChartPainter {
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(-mTranslateX, y),
-        Offset(-mTranslateX + mWidth / scaleX, y), paintX);
+    canvas.drawLine(Offset(-mTranslateX, y), Offset(-mTranslateX + mWidth / scaleX, y), paintX);
     if (scaleX >= 1) {
-      canvas.drawOval(
-          Rect.fromCenter(
-              center: Offset(x, y), height: 15.0 * scaleX, width: 15.0),
-          paint);
+      canvas.drawOval(Rect.fromCenter(center: Offset(x, y), height: 15.0 * scaleX, width: 15.0), paint);
     } else {
-      canvas.drawOval(
-          Rect.fromCenter(
-              center: Offset(x, y), height: 10.0, width: 10.0 / scaleX),
-          paint);
+      canvas.drawOval(Rect.fromCenter(center: Offset(x, y), height: 10.0, width: 10.0 / scaleX), paint);
     }
     if (lines.length >= 1) {
       lines.forEach((element) {
@@ -569,26 +546,18 @@ class ChartPainter extends BaseChartPainter {
     double x = getX(index);
     double y = getMainY(point.close);
     // k线图竖线
-    canvas.drawLine(Offset(x, mTopPadding),
-        Offset(x, size.height - mBottomPadding), paintY);
+    canvas.drawLine(Offset(x, mTopPadding), Offset(x, size.height - mBottomPadding), paintY);
 
     Paint paintX = Paint()
       ..color = this.chartColors.hCrossColor
       ..strokeWidth = this.chartStyle.hCrossWidth
       ..isAntiAlias = true;
     // k线图横线
-    canvas.drawLine(Offset(-mTranslateX, y),
-        Offset(-mTranslateX + mWidth / scaleX, y), paintX);
+    canvas.drawLine(Offset(-mTranslateX, y), Offset(-mTranslateX + mWidth / scaleX, y), paintX);
     if (scaleX >= 1) {
-      canvas.drawOval(
-          Rect.fromCenter(
-              center: Offset(x, y), height: 2.0 * scaleX, width: 2.0),
-          paintX);
+      canvas.drawOval(Rect.fromCenter(center: Offset(x, y), height: 2.0 * scaleX, width: 2.0), paintX);
     } else {
-      canvas.drawOval(
-          Rect.fromCenter(
-              center: Offset(x, y), height: 2.0, width: 2.0 / scaleX),
-          paintX);
+      canvas.drawOval(Rect.fromCenter(center: Offset(x, y), height: 2.0, width: 2.0 / scaleX), paintX);
     }
   }
 
@@ -602,10 +571,7 @@ class ChartPainter extends BaseChartPainter {
     return tp;
   }
 
-  String getDate(int? date) => dateFormat(
-      DateTime.fromMillisecondsSinceEpoch(
-          date ?? DateTime.now().millisecondsSinceEpoch),
-      mFormats);
+  String getDate(int? date) => dateFormat(DateTime.fromMillisecondsSinceEpoch(date ?? DateTime.now().millisecondsSinceEpoch), mFormats);
 
   double getMainY(double y) => mMainRenderer.getY(y);
 
@@ -619,6 +585,54 @@ class ChartPainter extends BaseChartPainter {
     return mMainRect.contains(point);
   }
 
+  void drawHighlightDates(Canvas canvas, Size size, double startX, double endX) {
+    if (highlightFrom == 0 || highlightUntil == 0 || startX == 0 || endX == 0) return;
+    print(highlightUntil - highlightFrom);
+    print(endX - startX);
+    print("\n\nMAKE HIGHLITHG, ${highlightFrom} :: ${highlightUntil} :: ${startX} :: ${endX}");
+    // var index = calculateSelectedX(selectX);
+    // KLineEntity point = getItem(index);
+    // Paint paintY = Paint()
+    //   ..color = Colors.purple.withOpacity(0.3) //this.chartColors.vCrossColor
+    //   // ..color = this.chartColors.vCrossColor
+    //   ..strokeWidth = this.chartStyle.vCrossWidth
+    //   ..isAntiAlias = true;
+    // double y = getMainY(point.close);
+    // k线图竖线
+    // canvas.drawLine(Offset(x, mTopPadding),
+    //     Offset(x, size.height - mBottomPadding), paintY);
+
+    Paint mBgPaint = Paint();
+    Gradient mBgGradient = LinearGradient(
+      begin: Alignment.bottomCenter,
+      end: Alignment.topCenter,
+      colors: [Colors.purple.withOpacity(0.3), Colors.purple.withOpacity(0.2)],
+    );
+    Rect mainRect = Rect.fromLTRB(startX.toDouble(), 0, endX.toDouble(), mMainRect.height + mTopPadding);
+    canvas.drawRect(mainRect, mBgPaint..shader = mBgGradient.createShader(mainRect));
+
+    // canvas.drawRect(
+    //     Rect.fromLTRB(0, 0, (highlightUntil - highlightFrom).toDouble(),
+    //         size.height - mBottomPadding),
+    //     mBgPaint..shader = mBgGradient.createShader(mainRect));
+    // canvas.drawRect(
+    //     Rect.fromLTRB(0, 0, (highlightUntil - highlightFrom).toDouble(),
+    //         size.height - mBottomPadding),
+    //     mBgPaint..shader = mBgGradient.createShader(mainRect));
+
+    // Paint paintX = Paint()
+    //   // ..color = this.chartColors.hCrossColor
+    //   ..color = Colors.pink.withOpacity(0.5) //this.chartColors.hCrossColor
+    //   ..strokeWidth = this.chartStyle.hCrossWidth
+    //   ..isAntiAlias = true;
+    // // k线图横线
+    // canvas.drawLine(Offset(-mTranslateX, y), Offset(-mTranslateX + mWidth / scaleX, y), paintX);
+    // if (scaleX >= 1) {
+    //   canvas.drawOval(Rect.fromCenter(center: Offset(x, y), height: 2.0 * scaleX, width: 2.0), paintX);
+    // } else {
+    //   canvas.drawOval(Rect.fromCenter(center: Offset(x, y), height: 2.0, width: 2.0 / scaleX), paintX);
+    // }
+  }
 
   void drawVerticalDivider(Canvas canvas, Size size, double curX) {
     if (verticalLineAt == 0) return;
@@ -629,11 +643,10 @@ class ChartPainter extends BaseChartPainter {
       // ..color = this.chartColors.vCrossColor
       ..strokeWidth = this.chartStyle.vCrossWidth
       ..isAntiAlias = true;
-    double x = curX;//getX(index);
+    double x = curX; //getX(index);
     double y = getMainY(point.close);
     // k线图竖线
-    canvas.drawLine(Offset(x, mTopPadding),
-        Offset(x, size.height - mBottomPadding), paintY);
+    canvas.drawLine(Offset(x, mTopPadding), Offset(x, size.height - mBottomPadding), paintY);
 
     Paint paintX = Paint()
       // ..color = this.chartColors.hCrossColor
@@ -641,19 +654,11 @@ class ChartPainter extends BaseChartPainter {
       ..strokeWidth = this.chartStyle.hCrossWidth
       ..isAntiAlias = true;
     // k线图横线
-    canvas.drawLine(Offset(-mTranslateX, y),
-        Offset(-mTranslateX + mWidth / scaleX, y), paintX);
+    canvas.drawLine(Offset(-mTranslateX, y), Offset(-mTranslateX + mWidth / scaleX, y), paintX);
     if (scaleX >= 1) {
-      canvas.drawOval(
-          Rect.fromCenter(
-              center: Offset(x, y), height: 2.0 * scaleX, width: 2.0),
-          paintX);
+      canvas.drawOval(Rect.fromCenter(center: Offset(x, y), height: 2.0 * scaleX, width: 2.0), paintX);
     } else {
-      canvas.drawOval(
-          Rect.fromCenter(
-              center: Offset(x, y), height: 2.0, width: 2.0 / scaleX),
-          paintX);
+      canvas.drawOval(Rect.fromCenter(center: Offset(x, y), height: 2.0, width: 2.0 / scaleX), paintX);
     }
   }
-
 }
