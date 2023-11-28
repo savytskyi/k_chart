@@ -48,6 +48,7 @@ class ChartPainter extends BaseChartPainter {
   final bool hideGrid;
   final bool showNowPrice;
   final VerticalTextAlignment verticalTextAlignment;
+  int verticalLineAt = 0; // Draw a divider line at a given date
 
   ChartPainter(
     this.chartStyle,
@@ -73,6 +74,7 @@ class ChartPainter extends BaseChartPainter {
     this.showNowPrice = true,
     this.fixedLength = 2,
     this.maDayList = const [5, 10, 20],
+    this.verticalLineAt = 0, // Draw a divider line at a given date
   }) : super(chartStyle,
             datas: datas,
             scaleX: scaleX,
@@ -85,7 +87,8 @@ class ChartPainter extends BaseChartPainter {
             volHidden: volHidden,
             secondaryState: secondaryState,
             xFrontPadding: xFrontPadding,
-            isLine: isLine) {
+            isLine: isLine,
+            verticalLineAt: verticalLineAt) {
     selectPointPaint = Paint()
       ..isAntiAlias = true
       ..strokeWidth = 0.5
@@ -195,6 +198,13 @@ class ChartPainter extends BaseChartPainter {
       mVolRenderer?.drawChart(lastPoint, curPoint, lastX, curX, size, canvas);
       mSecondaryRenderer?.drawChart(
           lastPoint, curPoint, lastX, curX, size, canvas);
+
+
+      var h24 = 12 * 60 * 60 * 1000;
+      if (verticalLineAt != 0 && (verticalLineAt - h24) < curPoint.time! && curPoint.time! < (verticalLineAt + h24)) {
+        print("Draw vertical line? ${verticalLineAt} ${curPoint?.time}");
+        drawVerticalDivider(canvas, size, curX);
+      }
     }
 
     if ((isLongPress == true || (isTapShowInfoDialog && isOnTap)) &&
@@ -608,4 +618,42 @@ class ChartPainter extends BaseChartPainter {
   bool isInMainRect(Offset point) {
     return mMainRect.contains(point);
   }
+
+
+  void drawVerticalDivider(Canvas canvas, Size size, double curX) {
+    if (verticalLineAt == 0) return;
+    var index = calculateSelectedX(selectX);
+    KLineEntity point = getItem(index);
+    Paint paintY = Paint()
+      ..color = Colors.pink.withOpacity(0.5) //this.chartColors.vCrossColor
+      // ..color = this.chartColors.vCrossColor
+      ..strokeWidth = this.chartStyle.vCrossWidth
+      ..isAntiAlias = true;
+    double x = curX;//getX(index);
+    double y = getMainY(point.close);
+    // k线图竖线
+    canvas.drawLine(Offset(x, mTopPadding),
+        Offset(x, size.height - mBottomPadding), paintY);
+
+    Paint paintX = Paint()
+      // ..color = this.chartColors.hCrossColor
+      ..color = Colors.pink.withOpacity(0.5) //this.chartColors.hCrossColor
+      ..strokeWidth = this.chartStyle.hCrossWidth
+      ..isAntiAlias = true;
+    // k线图横线
+    canvas.drawLine(Offset(-mTranslateX, y),
+        Offset(-mTranslateX + mWidth / scaleX, y), paintX);
+    if (scaleX >= 1) {
+      canvas.drawOval(
+          Rect.fromCenter(
+              center: Offset(x, y), height: 2.0 * scaleX, width: 2.0),
+          paintX);
+    } else {
+      canvas.drawOval(
+          Rect.fromCenter(
+              center: Offset(x, y), height: 2.0, width: 2.0 / scaleX),
+          paintX);
+    }
+  }
+
 }
