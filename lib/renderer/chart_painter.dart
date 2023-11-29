@@ -206,7 +206,8 @@ class ChartPainter extends BaseChartPainter {
       }
     }
 
-    if (highlightFrom != 0 && highlightUntil != 0 && highlightStartX != 0 && highlightEndX != 0) {
+    // if (highlightFrom != 0 && highlightUntil != 0 && highlightStartX != 0 && highlightEndX != 0) {
+    if (highlightFrom != 0 && highlightUntil != 0 && highlightEndX != 0) {
       drawHighlightDates(canvas, size, highlightStartX, highlightEndX);
     }
 
@@ -586,7 +587,7 @@ class ChartPainter extends BaseChartPainter {
   }
 
   void drawHighlightDates(Canvas canvas, Size size, double startX, double endX) {
-    if (highlightFrom == 0 || highlightUntil == 0 || startX == 0 || endX == 0) return;
+    if (highlightFrom == 0 || highlightUntil == 0 || endX == 0) return;
     // print(highlightUntil - highlightFrom);
     // print(endX - startX);
     // print("\n\nMAKE HIGHLITHG, ${highlightFrom} :: ${highlightUntil} :: ${startX} :: ${endX}");
